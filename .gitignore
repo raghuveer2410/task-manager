@@ -1,0 +1,21 @@
+# Node modules
+node_modules/
+task-manager-backend/node_modules/
+task-manager-frontend/node_modules/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Environment files
+.env
+
+# MacOS
+.DS_Store
+node_modules/
+task-manager-backend/node_modules/
+task-manager-frontend/node_modules/
+.env
+.DS_Store
