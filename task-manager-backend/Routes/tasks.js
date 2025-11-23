@@ -5,7 +5,7 @@ import authMiddleware from '../Middleware/authMiddleware.js';
 const router = express.Router();
 
 // Get all tasks
-router.get('/', auth, async (req, res) => {
+router.get('/', authMiddleware, async (req, res) => {
   try {
     const tasks = await Task.find({ user: req.user.id }).sort({ createdAt: -1 });
     return res.json(tasks);
@@ -16,7 +16,7 @@ router.get('/', auth, async (req, res) => {
 });
 
 // Create task
-router.post('/', auth, async (req, res) => {
+router.post('/', authMiddleware, async (req, res) => {
   console.log('Received req.body:', req.body); // 🔹 debug line
 
   try {
