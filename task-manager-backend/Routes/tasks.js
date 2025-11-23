@@ -41,7 +41,7 @@ router.post('/', authMiddleware, async (req, res) => {
 });
 
 // Update task
-router.put('/:id', auth, async (req, res) => {
+router.put('/:id', authMiddleware, async (req, res) => {
   try {
     const task = await Task.findOneAndUpdate(
       { _id: req.params.id, user: req.user.id },
@@ -61,7 +61,7 @@ router.put('/:id', auth, async (req, res) => {
 });
 
 // Delete task
-router.delete('/:id', auth, async (req, res) => {
+router.delete('/:id', authMiddleware, async (req, res) => {
   try {
     const task = await Task.findOneAndDelete({
       _id: req.params.id,
