@@ -1,69 +1,79 @@
-import { useEffect, useState } from "react";
+// src/pages/Dashboard.jsx
+import { useEffect, useState, useCallback, useMemo } from "react";
 import API from "../api/api";
+import AppLayout from "../layouts/AppLayout";
 import TaskForm from "../components/TaskForm";
 import TaskList from "../components/TaskList";
+import StatCard from "../components/StatCard";
 
-function Dashboard() {
+export default function DashboardPage() {
   const [tasks, setTasks] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  const fetchTasks = async () => {
+  // Fetch all tasks from backend
+  const fetchTasks = useCallback(async () => {
+    setLoading(true);
+    setError('');
     try {
-      const res = await API.get("/tasks");
-
-      // Normalize backend response
-      const data = res.data.tasks || res.data;
-
-      setTasks(
-        data.map((t) => ({
-          ...t,
-          _id: t._id || t.id,
-        }))
-      );
+      const res = await API.get("/api/tasks"); // fix endpoint
+      const data = res.data.tasks || res.data || [];
+      setTasks(data.map((t) => ({ ...t, _id: t._id || t.id })));
     } catch (err) {
       console.error("Error loading tasks:", err);
+      setError(err.response?.data?.message || "Failed to load tasks.");
+    } finally {
+      setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchTasks();
-  }, []);
+  }, [fetchTasks]);
+
+  // Task statistics
+  const completedCount = useMemo(
+    () => tasks.filter((t) => t.status === "done").length,
+    [tasks]
+  );
+  const pendingCount = useMemo(
+    () => tasks.filter((t) => t.status !== "done").length,
+    [tasks]
+  );
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      {/* NAVBAR */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-gray-800">
-            🧭 Task Management Dashboard
-          </h1>
+    <AppLayout title="Task Management" onRefresh={fetchTasks}>
+      {error && (
+        <p className="mb-6 text-red-600 bg-red-100 p-3 rounded">{error}</p>
+      )}
 
-          <button
-            onClick={fetchTasks}
-            className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition"
-          >
-            Refresh Tasks
-          </button>
+      <section className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <StatCard title="Total Tasks" value={tasks.length} />
+        <StatCard title="Completed" value={completedCount} />
+        <StatCard title="Pending" value={pendingCount} />
+      </section>
+
+      <section className="mb-8">
+        <div className="bg-white rounded-2xl shadow p-6">
+          <h2 className="text-lg font-semibold mb-4">Add New Task</h2>
+          <TaskForm
+            onAddTask={(newTask) =>
+              setTasks((prev) => [...prev, { ...newTask, _id: newTask._id || newTask.id }])
+            }
+          />
         </div>
-      </header>
+      </section>
 
-      {/* MAIN CONTENT */}
-      <main className="max-w-6xl mx-auto px-6 py-10">
-        <h2 className="text-xl font-semibold text-gray-700 mb-6">
-          Manage Your Tasks
-        </h2>
-
-        {/* Task Form */}
-        <div className="mb-10">
-          <TaskForm fetchTasks={fetchTasks} />
+      <section>
+        <div className="bg-white rounded-2xl shadow p-6">
+          <h2 className="text-lg font-semibold mb-4">Your Tasks</h2>
+          {loading ? (
+            <p>Loading tasks...</p>
+          ) : (
+            <TaskList tasks={tasks} fetchTasks={fetchTasks} />
+          )}
         </div>
-
-        {/* Task List */}
-        <div>
-          <TaskList tasks={tasks} />
-        </div>
-      </main>
-    </div>
+      </section>
+    </AppLayout>
   );
 }
-
-export default Dashboard;

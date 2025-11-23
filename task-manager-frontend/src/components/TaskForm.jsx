@@ -4,41 +4,71 @@ import 'react-datepicker/dist/react-datepicker.css';
 import API from '../api/api';
 import { Calendar, Flag, ClipboardList } from 'lucide-react';
 
-export default function TaskForm({ fetchTasks, onAddTask }) {
+export default function TaskForm({ onAddTask, fetchTasks }) {
   const [task, setTask] = useState({ title: '', description: '', priority: 'low', status: 'todo' });
   const [dueDate, setDueDate] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  const handleChange = (e) => setTask({ ...task, [e.target.name]: e.target.value });
+  const handleChange = ({ target: { name, value } }) =>
+    setTask({ ...task, [name]: value });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!task.title.trim()) return;
+
     setLoading(true);
     try {
-      const res = await API.post('/tasks', { ...task, dueDate });
-      const newTask = res.data;
-      if (onAddTask) onAddTask(newTask); // Optimistic update
-      if (fetchTasks) fetchTasks(); // ensure backend sync
+      const payload = { ...task, dueDate: dueDate ? dueDate.toISOString() : null };
+      const res = await API.post('/api/tasks', payload, {
+      headers: { 'Content-Type': 'application/json',
+        Authorization: `Bearer ${localStorage.getItem('token')}`,
+       }
+    });
+
+      const newTask = { ...res.data, _id: res.data._id || res.data.id };
+
+      if (onAddTask) onAddTask(newTask);
+      else if (fetchTasks) fetchTasks();
+
       setTask({ title: '', description: '', priority: 'low', status: 'todo' });
       setDueDate(null);
     } catch (err) {
       console.error('Error creating task:', err);
+      alert('Failed to add task. Please try again.');
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   return (
-    <form onSubmit={handleSubmit} className="bg-white p-6 rounded-xl shadow-lg border border-gray-200 flex flex-col gap-4">
+    <form
+      onSubmit={handleSubmit}
+      className="bg-white p-6 rounded-xl shadow-lg border border-gray-200 flex flex-col gap-4"
+    >
       {/* Title */}
       <label className="block">
         <span className="text-gray-700 font-medium">Task Title</span>
-        <input name="title" value={task.title} onChange={handleChange} required className="w-full mt-1 p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition" placeholder="Enter task title" />
+        <input
+          name="title"
+          value={task.title}
+          onChange={handleChange}
+          required
+          className="w-full mt-1 p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition"
+          placeholder="Enter task title"
+        />
       </label>
 
       {/* Description */}
       <label className="block">
         <span className="text-gray-700 font-medium">Description</span>
-        <textarea name="description" value={task.description} onChange={handleChange} rows={3} className="w-full mt-1 p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition" placeholder="Enter task details" />
+        <textarea
+          name="description"
+          value={task.description}
+          onChange={handleChange}
+          rows={3}
+          className="w-full mt-1 p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition"
+          placeholder="Enter task details"
+        />
       </label>
 
       {/* Row: Priority, Status, DueDate */}
@@ -68,11 +98,9 @@ export default function TaskForm({ fetchTasks, onAddTask }) {
       </div>
 
       {/* Submit button */}
-      <button type="submit" disabled={loading} className={`w-full py-3 rounded-lg text-white font-semibold transition ${loading ? 'bg-blue-300 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}>{loading ? 'Adding...' : 'Add Task'}</button>
+      <button type="submit" disabled={loading} className={`w-full py-3 rounded-lg text-white font-semibold transition ${loading ? 'bg-blue-300 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}>
+        {loading ? 'Adding...' : 'Add Task'}
+      </button>
     </form>
   );
 }
-
-
-
-

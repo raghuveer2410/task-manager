@@ -1,15 +1,44 @@
-import axios from 'axios';
+import axios from "axios";
 
 const API = axios.create({
-  baseURL: 'http://127.0.0.1:8000/api', // must match backend port
+  baseURL: "http://localhost:8000",
+  withCredentials: true,
+  headers: {
+    "Content-Type": "application/json",
+  },
 });
 
-API.interceptors.request.use(config => {
-  const token = localStorage.getItem('token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+// 🔥 Auto attach token on every request
+API.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem("token");
+
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    } else {
+      delete config.headers.Authorization; // Prevent sending empty Bearer
+    }
+
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+API.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      // Token is invalid or expired
+      localStorage.removeItem("token");
+
+      // Redirect only if user is not already on login page
+      if (window.location.pathname !== "/login") {
+        window.location.href = "/login";
+      }
+    }
+
+    return Promise.reject(error);
   }
-  return config;
-});
+);
 
 export default API;

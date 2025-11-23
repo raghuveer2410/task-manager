@@ -17,12 +17,12 @@ router.get('/', auth, async (req, res) => {
 
 // Create task
 router.post('/', auth, async (req, res) => {
+  console.log('Received req.body:', req.body); // 🔹 debug line
+
   try {
     const { title, description, status, priority, dueDate } = req.body;
 
-    if (!title) {
-      return res.status(400).json({ message: 'Title is required' });
-    }
+    if (!title) return res.status(400).json({ message: 'Title is required' });
 
     const task = await Task.create({
       user: req.user.id,
@@ -30,13 +30,13 @@ router.post('/', auth, async (req, res) => {
       description,
       status,
       priority,
-      dueDate
+      dueDate,
     });
 
-    return res.status(201).json(task);
+    res.status(201).json(task);
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: 'Server error' });
   }
 });
 

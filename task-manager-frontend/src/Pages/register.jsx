@@ -2,10 +2,11 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import API from '../api/api';
 
-function Register() {
+function Register({ setIsLoggedIn }) {
   const [form, setForm] = useState({ name: '', email: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
   const navigate = useNavigate();
@@ -17,20 +18,37 @@ function Register() {
     e.preventDefault();
     setLoading(true);
     setError('');
+    setSuccess('');
 
     try {
-      const res = await API.post('/auth/register', form);
-      localStorage.setItem('token', res.data.token);
-      navigate('/dashboard');
+      const res = await API.post('/api/auth/register', form);
+
+      // ✅ Save token in localStorage
+      const token = res.data.token;
+      if (!token) throw new Error('Token not received');
+
+      localStorage.setItem('token', token);
+
+      // ✅ Set global Axios Authorization header
+      API.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+
+      // ✅ Update app state
+      if (setIsLoggedIn) setIsLoggedIn(true);
+
+      setSuccess('Account created successfully 🎉 Redirecting...');
+
+      // ✅ Redirect after short delay
+      setTimeout(() => navigate('/dashboard', { replace: true }), 1000);
+
     } catch (err) {
-      console.error(err); // full error for debugging
-      if (err.response?.data?.message) {
-        setError(err.response.data.message);
-      } else if (err.request) {
-        setError('Server did not respond. Please try again later.');
-      } else {
-        setError('Registration failed. Please check your input.');
-      }
+      console.error('Register error:', err);
+
+      // Friendly error messages
+      const msg =
+        err.response?.data?.message ||
+        (err.request ? 'Server did not respond. Please try again.' : 'Registration failed.');
+      setError(msg);
+
     } finally {
       setLoading(false);
     }
@@ -41,53 +59,40 @@ function Register() {
       <div className="w-full max-w-md bg-white p-8 rounded-2xl shadow-lg">
         <h2 className="text-2xl font-bold text-center mb-6">Create Account</h2>
 
-        {error && (
-          <p className="mb-4 text-red-600 text-center bg-red-100 py-2 rounded">
-            {error}
-          </p>
-        )}
+        {error && <p className="mb-4 text-red-600 text-center bg-red-100 py-2 rounded">{error}</p>}
+        {success && <p className="mb-4 text-green-600 text-center bg-green-100 py-2 rounded">{success}</p>}
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="sr-only" htmlFor="name">Full Name</label>
-            <input
-              id="name"
-              name="name"
-              type="text"
-              placeholder="Full Name"
-              onChange={handleChange}
-              value={form.name}
-              className="w-full p-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all duration-200"
-              required
-            />
-          </div>
+          <input
+            name="name"
+            type="text"
+            placeholder="Full Name"
+            value={form.name}
+            onChange={handleChange}
+            className="w-full p-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+            required
+          />
 
-          <div>
-            <label className="sr-only" htmlFor="email">Email</label>
-            <input
-              id="email"
-              name="email"
-              type="email"
-              placeholder="Email"
-              onChange={handleChange}
-              value={form.email}
-              className="w-full p-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all duration-200"
-              required
-            />
-          </div>
+          <input
+            name="email"
+            type="email"
+            placeholder="Email"
+            value={form.email}
+            onChange={handleChange}
+            className="w-full p-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+            required
+          />
 
           <div className="relative">
-            <label className="sr-only" htmlFor="password">Password</label>
             <input
-              id="password"
               name="password"
               type={showPassword ? 'text' : 'password'}
-              placeholder="Password (min 6 chars)"
-              onChange={handleChange}
+              placeholder="Password (min 6 characters)"
               value={form.password}
-              className="w-full p-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all duration-200"
+              onChange={handleChange}
+              className="w-full p-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
               required
-              minLength="6"
+              minLength={6}
             />
             <button
               type="button"
@@ -109,7 +114,7 @@ function Register() {
 
         <p className="text-center mt-4 text-sm">
           Already have an account?{' '}
-          <Link to="/" className="text-blue-600 hover:underline">
+          <Link to="/login" className="text-blue-600 hover:underline">
             Login
           </Link>
         </p>
