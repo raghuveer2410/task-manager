@@ -1,77 +1,87 @@
 import express from 'express';
-import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import User from '../models/user.js'; // <-- FIXED NAME
+import User from '../models/user.js';
 
 const router = express.Router();
 
-// Register route
+const normalizeEmail = (email = '') => email.trim().toLowerCase();
+const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
+const createToken = (userId) => {
+  if (!process.env.JWT_SECRET) {
+    throw new Error('JWT_SECRET is not configured');
+  }
+
+  return jwt.sign({ id: userId }, process.env.JWT_SECRET, { expiresIn: '1d' });
+};
+
 router.post('/register', async (req, res) => {
-  const { name, email, password } = req.body;
+  const name = req.body.name?.trim();
+  const email = normalizeEmail(req.body.email);
+  const password = req.body.password;
+
+  if (!name || !email || !password) {
+    return res.status(400).json({ message: 'Name, email, and password are required' });
+  }
+
+  if (!isValidEmail(email)) {
+    return res.status(400).json({ message: 'Please provide a valid email address' });
+  }
+
+  if (password.length < 8) {
+    return res.status(400).json({ message: 'Password must be at least 8 characters long' });
+  }
 
   try {
     const existingUser = await User.findOne({ email });
-    if (existingUser)
-      return res.status(400).json({ message: "Email already exists" });
+    if (existingUser) {
+      return res.status(409).json({ message: 'Email already exists' });
+    }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+    // Password hashing is handled by the User model pre-save hook.
+    const newUser = await User.create({ name, email, password });
+    const token = createToken(newUser._id);
 
-    const newUser = await User.create({
-      name,
-      email,
-      password: hashedPassword,
-    });
-
-    const token = jwt.sign(
-      { id: newUser._id },
-      process.env.JWT_SECRET,
-      { expiresIn: "1d" }
-    );
-
-    res.status(201).json({
-      message: "User registered successfully",
+    return res.status(201).json({
+      message: 'User registered successfully',
       token,
       user: { id: newUser._id, name: newUser.name, email: newUser.email }
     });
-
   } catch (err) {
-    console.error("Register error:", err);
-    res.status(500).json({ message: "Server error" });
+    console.error('Register error:', err.message);
+    return res.status(500).json({ message: 'Server error' });
   }
 });
 
-
-// LOGIN
 router.post('/login', async (req, res) => {
-  const { email, password } = req.body;
+  const email = normalizeEmail(req.body.email);
+  const password = req.body.password;
 
-  if (!email || !password)
-    return res.status(400).json({ message: "Email and password are required" });
+  if (!email || !password) {
+    return res.status(400).json({ message: 'Email and password are required' });
+  }
 
   try {
     const user = await User.findOne({ email });
-    if (!user)
-      return res.status(400).json({ message: "Invalid credentials" });
+    if (!user) {
+      return res.status(401).json({ message: 'Invalid credentials' });
+    }
 
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch)
-      return res.status(400).json({ message: "Invalid credentials" });
+    const isMatch = await user.comparePassword(password);
+    if (!isMatch) {
+      return res.status(401).json({ message: 'Invalid credentials' });
+    }
 
-    const token = jwt.sign(
-      { id: user._id },
-      process.env.JWT_SECRET,
-      { expiresIn: "1d" }
-    );
+    const token = createToken(user._id);
 
-    res.json({
-      message: "Login successful",
+    return res.json({
+      message: 'Login successful',
       token,
       user: { id: user._id, name: user.name, email: user.email }
     });
-
   } catch (err) {
-    console.error("Login error:", err);
-    res.status(500).json({ message: "Server error" });
+    console.error('Login error:', err.message);
+    return res.status(500).json({ message: 'Server error' });
   }
 });
 
