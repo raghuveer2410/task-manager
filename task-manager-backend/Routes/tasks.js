@@ -8,26 +8,13 @@ const allowedStatuses = new Set(['todo', 'in-progress', 'done']);
 const allowedPriorities = new Set(['low', 'medium', 'high']);
 
 const validateTaskInput = ({ title, status, priority, dueDate }, { partial = false } = {}) => {
-  if (!partial && (!title || !title.trim())) {
-    return 'Title is required';
-  }
-
-  if (title !== undefined && !title.trim()) {
-    return 'Title cannot be empty';
-  }
-
-  if (status !== undefined && !allowedStatuses.has(status)) {
-    return 'Invalid status';
-  }
-
-  if (priority !== undefined && !allowedPriorities.has(priority)) {
-    return 'Invalid priority';
-  }
-
+  if (!partial && (!title || !title.trim())) return 'Title is required';
+  if (title !== undefined && !title.trim()) return 'Title cannot be empty';
+  if (status !== undefined && !allowedStatuses.has(status)) return 'Invalid status';
+  if (priority !== undefined && !allowedPriorities.has(priority)) return 'Invalid priority';
   if (dueDate !== undefined && dueDate !== null && Number.isNaN(Date.parse(dueDate))) {
     return 'Invalid due date';
   }
-
   return null;
 };
 
@@ -44,10 +31,7 @@ router.get('/', authMiddleware, async (req, res) => {
 router.post('/', authMiddleware, async (req, res) => {
   const { title, description, status, priority, dueDate } = req.body;
   const validationError = validateTaskInput({ title, status, priority, dueDate });
-
-  if (validationError) {
-    return res.status(400).json({ message: validationError });
-  }
+  if (validationError) return res.status(400).json({ message: validationError });
 
   try {
     const task = await Task.create({
@@ -56,9 +40,9 @@ router.post('/', authMiddleware, async (req, res) => {
       description: description?.trim(),
       status,
       priority,
-      dueDate: dueDate || null
+      dueDate: dueDate || null,
+      completedAt: status === 'done' ? new Date() : null
     });
-
     return res.status(201).json(task);
   } catch (err) {
     console.error('Create task error:', err.message);
@@ -73,11 +57,8 @@ router.put('/:id', authMiddleware, async (req, res) => {
 
   const editableFields = ['title', 'description', 'status', 'priority', 'dueDate'];
   const updates = {};
-
   for (const field of editableFields) {
-    if (Object.prototype.hasOwnProperty.call(req.body, field)) {
-      updates[field] = req.body[field];
-    }
+    if (Object.prototype.hasOwnProperty.call(req.body, field)) updates[field] = req.body[field];
   }
 
   if (updates.title !== undefined) updates.title = updates.title.trim();
@@ -85,9 +66,10 @@ router.put('/:id', authMiddleware, async (req, res) => {
   if (updates.dueDate === '') updates.dueDate = null;
 
   const validationError = validateTaskInput(updates, { partial: true });
-  if (validationError) {
-    return res.status(400).json({ message: validationError });
-  }
+  if (validationError) return res.status(400).json({ message: validationError });
+
+  if (updates.status === 'done') updates.completedAt = new Date();
+  if (updates.status && updates.status !== 'done') updates.completedAt = null;
 
   try {
     const task = await Task.findOneAndUpdate(
@@ -95,11 +77,7 @@ router.put('/:id', authMiddleware, async (req, res) => {
       { $set: updates },
       { new: true, runValidators: true }
     );
-
-    if (!task) {
-      return res.status(404).json({ message: 'Task not found' });
-    }
-
+    if (!task) return res.status(404).json({ message: 'Task not found' });
     return res.json(task);
   } catch (err) {
     console.error('Update task error:', err.message);
@@ -113,15 +91,8 @@ router.delete('/:id', authMiddleware, async (req, res) => {
   }
 
   try {
-    const task = await Task.findOneAndDelete({
-      _id: req.params.id,
-      user: req.user.id
-    });
-
-    if (!task) {
-      return res.status(404).json({ message: 'Task not found' });
-    }
-
+    const task = await Task.findOneAndDelete({ _id: req.params.id, user: req.user.id });
+    if (!task) return res.status(404).json({ message: 'Task not found' });
     return res.json({ message: 'Task deleted' });
   } catch (err) {
     console.error('Delete task error:', err.message);
