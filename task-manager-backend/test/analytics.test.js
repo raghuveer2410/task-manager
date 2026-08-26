@@ -51,3 +51,19 @@ test('analytics summary calculates portfolio KPIs and ranks open tasks', () => {
   assert.equal(result.smartPriorities[0].title, 'Overdue');
   assert.equal(result.weeklyTrend.reduce((sum, week) => sum + week.completed, 0), 1);
 });
+
+test('empty accounts start with a zero productivity score', () => {
+  const result = buildAnalyticsSummary([], { now, rangeDays: 30 });
+
+  assert.deepEqual(result.summary, {
+    total: 0,
+    completed: 0,
+    pending: 0,
+    overdue: 0,
+    completionRate: 0,
+    onTimeRate: 0,
+    productivityScore: 0
+  });
+  assert.equal(result.smartPriorities.length, 0);
+  assert.ok(result.weeklyTrend.every((week) => week.completed === 0));
+});
