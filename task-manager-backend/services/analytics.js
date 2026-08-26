@@ -61,9 +61,9 @@ export const buildAnalyticsSummary = (tasks, { now = new Date(), rangeDays = 30 
     ? (completedOnTime.length / completedTasks.length) * 100
     : 0;
   const overdueRate = openTasks.length ? (overdueTasks.length / openTasks.length) * 100 : 0;
-  const productivityScore = round(
-    completionRate * 0.6 + onTimeRate * 0.25 + (100 - overdueRate) * 0.15
-  );
+  const productivityScore = tasks.length
+    ? round(completionRate * 0.6 + onTimeRate * 0.25 + (100 - overdueRate) * 0.15)
+    : 0;
 
   const statusBreakdown = ['todo', 'in-progress', 'done'].map((status) => ({
     status,
