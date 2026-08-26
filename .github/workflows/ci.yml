@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: |
+            task-manager-backend/package-lock.json
+            task-manager-frontend/package-lock.json
+
+      - name: Install backend dependencies
+        working-directory: task-manager-backend
+        run: npm ci
+
+      - name: Run backend analytics tests
+        working-directory: task-manager-backend
+        run: npm test
+
+      - name: Install frontend dependencies
+        working-directory: task-manager-frontend
+        run: npm ci
+
+      - name: Build frontend
+        working-directory: task-manager-frontend
+        run: npm run build
