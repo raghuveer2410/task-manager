@@ -3,6 +3,7 @@ import { HTML5Backend } from "react-dnd-html5-backend";
 import TaskItem from "./TaskItem";
 import { useState, useEffect } from "react";
 import API from "../api/api";
+
 function TaskList({ tasks: initialTasks, fetchTasks }) {
   const [taskList, setTaskList] = useState(initialTasks);
 
@@ -20,13 +21,13 @@ function TaskList({ tasks: initialTasks, fetchTasks }) {
   };
 
   const saveOrder = async () => {
-  try {
-    const order = taskList.map(t => t._id);
-    await API.post("/tasks/reorder", { order }); // use `order`
-  } catch (err) {
-    console.error("Error saving task order:", err);
-  }
-};
+    try {
+      const order = taskList.map(t => t._id);
+      await API.post("/tasks/reorder", { order });
+    } catch (err) {
+      console.error("Error saving task order:", err);
+    }
+  };
 
   return (
     <DndProvider backend={HTML5Backend}>
@@ -41,6 +42,7 @@ function TaskList({ tasks: initialTasks, fetchTasks }) {
               moveTask={moveTask}
               onDrop={saveOrder}
               removeTask={(id) => setTaskList(prev => prev.filter(t => t._id !== id))}
+              fetchTasks={fetchTasks}
             />
           ))}
         </ul>
