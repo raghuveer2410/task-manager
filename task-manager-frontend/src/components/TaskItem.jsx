@@ -15,7 +15,7 @@ const priorityStrip = {
   high: "bg-red-500",
 };
 
-const TaskItem = ({ task, index, moveTask, onDrop, removeTask }) => {
+const TaskItem = ({ task, index, moveTask, onDrop, removeTask, fetchTasks }) => {
   const [{ isDragging }, drag] = useDrag({
     type: "TASK",
     item: { index },
@@ -32,18 +32,19 @@ const TaskItem = ({ task, index, moveTask, onDrop, removeTask }) => {
   });
 
   const deleteTask = async () => {
-  if (!window.confirm("Are you sure you want to delete this task?")) return;
+    if (!window.confirm("Are you sure you want to delete this task?")) return;
 
-  // Optimistic remove
-  removeTask(task._id);
+    removeTask(task._id);
 
-  try {
-    await API.delete(`/tasks/${task._id}`);
-  } catch (err) {
-    console.error("Failed to delete task:", err);
-    alert("Failed to delete task. Please refresh.");
-  }
-};
+    try {
+      await API.delete(`/api/tasks/${task._id}`);
+      if (fetchTasks) await fetchTasks();
+    } catch (err) {
+      console.error("Failed to delete task:", err);
+      if (fetchTasks) await fetchTasks();
+      alert("Failed to delete task. Please try again.");
+    }
+  };
 
   const now = new Date();
   const dueDate = task.dueDate ? new Date(task.dueDate) : null;
