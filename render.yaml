@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: task-manager-backend
+    runtime: docker
+    dockerfilePath: ./task-manager-backend/Dockerfile
+    dockerContext: ./task-manager-backend
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: MONGO_URI
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: FRONTEND_URL
+        sync: false
+
+  - type: web
+    name: task-manager-frontend
+    runtime: docker
+    dockerfilePath: ./task-manager-frontend/Dockerfile
+    dockerContext: ./task-manager-frontend
+    plan: free
+    envVars:
+      - key: REACT_APP_API_URL
+        sync: false
