@@ -10,9 +10,15 @@ import analyticsRoutes from "./Routes/analytics.js";
 dotenv.config();
 const app = express();
 
+const configuredOrigins = (process.env.FRONTEND_URL || "")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
 const allowedOrigins = [
   "http://localhost:3000",
-  "https://task-manager-cyan-chi.vercel.app"
+  "https://task-manager-cyan-chi.vercel.app",
+  ...configuredOrigins
 ];
 
 app.use(cors({
@@ -34,6 +40,10 @@ app.get("/", (req, res) => {
   res.status(200).send("🚀 Task Manager Backend is Live!");
 });
 
+app.get("/health", (req, res) => {
+  res.status(200).json({ status: "healthy" });
+});
+
 app.use((err, req, res, next) => {
   console.error("❌ Server Error:", err.message);
   res.status(err.status || 500).json({
@@ -49,7 +59,7 @@ const startServer = async () => {
     console.log("✅ MongoDB Connected");
 
     const PORT = process.env.PORT || 8000;
-    app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+    app.listen(PORT, "0.0.0.0", () => console.log(`🚀 Server running on port ${PORT}`));
   } catch (error) {
     console.error("❌ Failed to start server:", error.message);
     process.exit(1);
