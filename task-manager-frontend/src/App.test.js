@@ -16,6 +16,8 @@ jest.mock('./api/api', () => ({
   },
 }));
 
+jest.mock('./Pages/dashboard', () => () => null);
+
 beforeEach(() => {
   localStorage.clear();
   window.history.pushState({}, '', '/');
